@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IDC Manifest Processor-KTCH</title>
+    <meta name="description" content="A browser-based tool to split delivery manifest PDFs into route-specific files organized by IDC folders for Kitchener station (KTCH)." />
+    <meta property="og:title" content="IDC Manifest Processor-KTCH" />
+    <meta property="og:description" content="A browser-based tool to split delivery manifest PDFs into route-specific files organized by IDC folders for Kitchener station (KTCH)." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              dragonfly: {
+                turquoise: '#00A68F',
+                black: '#000000',
+                lightblue: '#4BC8F3',
+                red: '#F24438',
+                orange: '#F88223',
+                yellow: '#FDED50',
+                pink: '#FAA0C5',
+                blue: '#1069A9',
+                slate: '#1e293b' // Keeping for console background
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'Arial', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body { font-family: 'Inter', sans-serif; }
+      /* Custom scrollbar for logs */
+      .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+      .scrollbar-thin::-webkit-scrollbar-track { background: #0f172a; }
+      .scrollbar-thin::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+      
+      /* Custom scrollbar for main content */
+      .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; border: 1px solid #0f172a; }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #00A68F; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "file-saver": "https://aistudiocdn.com/file-saver@^2.0.5",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "jszip": "https://aistudiocdn.com/jszip@^3.10.1",
+    "pdf-lib": "https://aistudiocdn.com/pdf-lib@^1.17.1",
+    "pdfjs-dist": "https://aistudiocdn.com/pdfjs-dist@^5.4.394",
+    "xlsx": "https://aistudiocdn.com/xlsx@^0.18.5",
+    "@google/genai": "https://esm.run/@google/genai"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-slate-950 text-gray-100 antialiased selection:bg-dragonfly-turquoise selection:text-white">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

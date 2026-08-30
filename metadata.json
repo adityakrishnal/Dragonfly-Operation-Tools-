@@ -1,0 +1,8 @@
+{
+  "name": "IDC Manifest Processor-KTCH",
+  "description": "A browser-based tool to split delivery manifest PDFs into route-specific files organized by IDC folders for Kitchener station (KTCH).",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
