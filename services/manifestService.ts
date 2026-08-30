@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import { PDFDocument, rgb } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import JSZip from 'jszip';
-import { LogEntry, IdcBundle, ProcessingResult, BusinessPackage, RouteTextData } from '../types';
+import { LogEntry, IdcBundle, ProcessingResult, BusinessPackage, RouteTextData, StationCode } from '../types';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -134,10 +134,13 @@ async function parseManifest(bytes: Uint8Array, onProgress: (p: number, n: numbe
     for (const ws of lines) {
       const text = ws.map(w => w.text).join(' ');
 
-      const rm = text.match(/Route\s*-\s*(\S+)/);
+      // Check for route declaration with standard or station-specific patterns
+      const rm = text.match(/Route\s*-\s*(\S+)/i) || 
+                 text.match(/\b((?:KTCH|LNDN)\s*\d+[A-Z0-9]*)\b/i) ||
+                 text.match(/(?:Route|RT)[\s:#-]*([A-Z0-9_-]{3,15})/i);
       if (rm) {
-        route = rm[1].toUpperCase();
-        const dm = text.match(/packages\s*:\s*(\d+)/);
+        route = rm[1].toUpperCase().replace(/\s+/g, '');
+        const dm = text.match(/packages\s*:\s*(\d+)/i) || text.match(/Total\s*(?:Pkgs|Packages)?\s*:\s*(\d+)/i);
         if (dm && !(route in declared)) declared[route] = parseInt(dm[1]);
         if (!routePages[route]) routePages[route] = [];
         if (!routePages[route].includes(p - 1)) routePages[route].push(p - 1);
@@ -426,7 +429,7 @@ async function buildSummaryDoc(idcName: string, stops: any[], todayStr: string):
   if (stops.length === 0) {
     page.drawText('No reported business stops on your routes today.', { x: 40, y, size: 12, font: bold, color: TURQDK });
     y -= 18;
-    page.drawText('If you deliver to any business today, report it — see the format below.', { x: 40, y, size: 10, font: helv, color: INK });
+    page.drawText('If you deliver to any business today, report it - see the format below.', { x: 40, y, size: 10, font: helv, color: INK });
     y -= 24;
   } else {
     tableHeader();
@@ -495,12 +498,12 @@ async function buildSummaryDoc(idcName: string, stops: any[], todayStr: string):
   y -= 22;
   page.drawText('Found an unreported business on your route?', { x: 40, y, size: 11.5, font: bold, color: TURQDK });
   y -= 15;
-  page.drawText('Please inform your supervisor at the end of your shift using the standard format — route number, business', { x: 40, y, size: 9.5, font: helv, color: INK });
+  page.drawText('Please inform your supervisor at the end of your shift using the standard format - route number, business', { x: 40, y, size: 9.5, font: helv, color: INK });
   y -= 12;
   page.drawText('sequence numbers, plus closing time and any delivery instructions if known:', { x: 40, y, size: 9.5, font: helv, color: INK });
   y -= 30;
   page.drawRectangle({ x: 40, y: y - 6, width: right - 40, height: 26, color: PAPER, borderColor: ORANGE, borderWidth: 1 });
-  page.drawText('Example:  KTCH1230 Business seq — 4, 8, 19, 65  (seq 19 closes 5pm, back door)', { x: 50, y: y + 2, size: 9.5, font: bold, color: INK });
+  page.drawText('Example:  KTCH1230 Business seq - 4, 8, 19, 65  (seq 19 closes 5pm, back door)', { x: 50, y: y + 2, size: 9.5, font: bold, color: INK });
 
   return doc;
 }
@@ -726,13 +729,15 @@ export const processManifests = async (
   pdfFile: File,
   excelFile: File, // Route Config Mapping (Excel)
   bizFile: File, // Business Address Directory (Excel)
-  qrFile: File | null,
+  qrFile: File | null = null,
+  station: StationCode = 'KTCH',
   log: LogCallback,
   onProgress: (percent: number) => void,
   shouldStop: { current: boolean }
 ): Promise<ProcessingResult> => {
   try {
     const currentDateStr = new Date().toISOString().split('T')[0];
+    log(`Initializing IDC Manifest Processing for Station: ${station === 'KTCH' ? 'Kitchener (KTCH)' : 'London (LNDN)'}...`, "info");
 
     // 1. Read Route Config mapping Excel
     if (shouldStop.current) throw new Error("Process stopped by user.");
@@ -1001,13 +1006,22 @@ export const processManifests = async (
             idcZip.file(filename, routePdfBytes);
             filesAddedToZip++;
 
+            const routeRecords = records.filter(r => r.route === route);
+            const seqNums = routeRecords.map(r => parseInt(r.seq)).filter(n => !isNaN(n));
+            const minSeq = seqNums.length > 0 ? Math.min(...seqNums) : 1;
+            const maxSeq = seqNums.length > 0 ? Math.max(...seqNums) : (routeRecords.length || 1);
+            const calcPkgCount = declared[route] || routeRecords.length || 0;
+            const calcSeqRange = seqNums.length > 0 ? `${minSeq} - ${maxSeq}` : `1 - ${calcPkgCount || 0}`;
+
             summaryRows.push({
               Route: route,
               IDC: idc,
               "Pages Found": manifestPages.length,
               "QR Attached": (qrPages && qrPages.length > 0) ? "Yes" : "No",
               "Business Stops": (byRoute[route] || []).length,
-              Status: "Included"
+              Status: "Included",
+              packageCount: calcPkgCount,
+              seqRange: calcSeqRange
             });
           } catch (e: any) {
             log(`Error generating PDF for route ${route}: ${e.message}`, "error");
@@ -1016,7 +1030,9 @@ export const processManifests = async (
               IDC: idc,
               "Pages Found": 0,
               "Business Stops": 0,
-              Status: `Error: ${e.message}`
+              Status: `Error: ${e.message}`,
+              packageCount: 0,
+              seqRange: "-"
             });
           }
         } else {
@@ -1025,7 +1041,9 @@ export const processManifests = async (
             IDC: idc,
             "Pages Found": 0,
             "Business Stops": 0,
-            Status: "Missing in PDF"
+            Status: "Missing in PDF",
+            packageCount: 0,
+            seqRange: "-"
           });
         }
       }
@@ -1053,7 +1071,8 @@ export const processManifests = async (
       summaryName: `IDC_Summary_Report_${currentDateStr}.xlsx`,
       businessPackages: matches,
       routeTextData: [],
-      summaryRows
+      summaryRows,
+      station
     };
 
   } catch (error: any) {

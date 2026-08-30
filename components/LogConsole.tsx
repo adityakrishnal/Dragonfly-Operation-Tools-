@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { LogEntry } from '../types';
-import { Terminal, Check, AlertTriangle, Info, XCircle, User } from 'lucide-react';
+import { Terminal, Check, AlertTriangle, Info, XCircle } from 'lucide-react';
 
 interface LogConsoleProps {
   logs: LogEntry[];

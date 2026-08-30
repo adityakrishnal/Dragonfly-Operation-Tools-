@@ -1,6 +1,6 @@
 {
   "name": "IDC Manifest Processor-KTCH",
-  "description": "A browser-based tool to split delivery manifest PDFs into route-specific files organized by IDC folders for Kitchener station (KTCH).",
+  "description": "Dragonfly | Intelcom operational tools hub for manifest processing, route packaging, and driver check-in/check-out cards across London (LNDN) and Kitchener (KTCH) stations.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

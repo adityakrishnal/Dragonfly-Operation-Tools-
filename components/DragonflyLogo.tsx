@@ -16,15 +16,25 @@ export const DragonflyLogoGraphic: React.FC<{
   className?: string;
   color?: string;
   height?: number | string;
+  usePng?: boolean;
 }> = ({
   className = "",
-  color = "#00A68F",
   height = 36,
+  usePng = false,
 }) => {
+  const logoSrc = usePng ? "/Dragonfly%20logo.png" : "/Dragonfly%20logo.svg";
+
   return (
     <div className={`flex items-center ${className}`}>
       <img
-        src="/dragonfly-logo.svg"
+        src={logoSrc}
+        onError={(e) => {
+          // Fallback to PNG if SVG encounters any issues or vice versa
+          const target = e.currentTarget;
+          if (!target.src.includes('.png')) {
+            target.src = '/Dragonfly%20logo.png';
+          }
+        }}
         alt="Dragonfly"
         height={height}
         style={{ height: typeof height === 'number' ? `${height}px` : height, width: 'auto' }}
