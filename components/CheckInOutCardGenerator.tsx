@@ -53,6 +53,7 @@ interface CheckInOutCardGeneratorProps {
   currentDate: string;
   onSelectDate: (date: string) => void;
   onBackToHub: () => void;
+  logActivity?: (action: string, details?: string) => void;
 }
 
 export const CheckInOutCardGenerator: React.FC<CheckInOutCardGeneratorProps> = ({
@@ -62,7 +63,8 @@ export const CheckInOutCardGenerator: React.FC<CheckInOutCardGeneratorProps> = (
   onUpdateOperator,
   currentDate,
   onSelectDate,
-  onBackToHub
+  onBackToHub,
+  logActivity
 }) => {
   // File states
   const [templateFile, setTemplateFile] = useState<File | null>(null);
@@ -114,6 +116,7 @@ export const CheckInOutCardGenerator: React.FC<CheckInOutCardGeneratorProps> = (
     setTemplateArrayBuffer(buffer);
     setUseBuiltInTemplate(false);
     setSettings(prev => ({ ...prev, useCustomTemplate: true }));
+    logActivity?.('upload', `Custom card template: ${file.name}`);
   };
 
   // Handle Manifest File Upload
@@ -125,6 +128,7 @@ export const CheckInOutCardGenerator: React.FC<CheckInOutCardGeneratorProps> = (
     setManifestFile(file);
     setGeneratedPdfBlob(null);
     setGeneratedPdfUrl(null);
+    logActivity?.('upload', `Route manifest: ${file.name}`);
   };
 
   // Analyze Manifest Action
@@ -344,6 +348,7 @@ export const CheckInOutCardGenerator: React.FC<CheckInOutCardGeneratorProps> = (
         totalCards: selected.length,
         totalPages: Math.ceil(selected.length / 2)
       });
+      logActivity?.('generate', `${selected.length} route cards, ${Math.ceil(selected.length / 2)} pages`);
     } catch (err: any) {
       console.error('PDF generation error:', err);
       alert(`Error generating cards PDF: ${err.message || 'Unknown error'}`);
@@ -357,6 +362,7 @@ export const CheckInOutCardGenerator: React.FC<CheckInOutCardGeneratorProps> = (
     if (!generatedPdfBlob) return;
     const filename = `Dragonfly_${currentStation}_CheckInOut_Cards_2Up_${currentDate}.pdf`;
     saveAs(generatedPdfBlob, filename);
+    logActivity?.('download', filename);
   };
 
   // Export Parsed Routes to Excel
@@ -386,7 +392,9 @@ export const CheckInOutCardGenerator: React.FC<CheckInOutCardGeneratorProps> = (
     XLSX.utils.book_append_sheet(wb, ws, 'Parsed Routes');
     const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, `Dragonfly_${currentStation}_Parsed_Routes_${currentDate}.xlsx`);
+    const filename = `Dragonfly_${currentStation}_Parsed_Routes_${currentDate}.xlsx`;
+    saveAs(blob, filename);
+    logActivity?.('download', filename);
   };
 
   // Toggle Route Selection
@@ -431,6 +439,12 @@ export const CheckInOutCardGenerator: React.FC<CheckInOutCardGeneratorProps> = (
     let formattedCode = newRouteCode.trim().toUpperCase();
     if (!formattedCode.startsWith(prefix)) {
       formattedCode = `${prefix}${formattedCode.replace(/[^0-9]/g, '') || formattedCode}`;
+    }
+
+    const digits = formattedCode.slice(prefix.length);
+    if (!/^\d{4}$/.test(digits)) {
+      alert(`Route number must be ${prefix} followed by exactly 4 digits (e.g. ${prefix}1200). You entered: ${formattedCode}`);
+      return;
     }
 
     const newRoute: ParsedManifestRoute = {

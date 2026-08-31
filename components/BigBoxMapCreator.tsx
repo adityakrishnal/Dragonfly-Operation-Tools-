@@ -42,6 +42,7 @@ interface BigBoxMapCreatorProps {
   currentDate: string;
   onSelectDate: (date: string) => void;
   onBackToHub: () => void;
+  logActivity?: (action: string, details?: string) => void;
 }
 
 // Pre-seeded Zone configurations
@@ -89,7 +90,8 @@ export const BigBoxMapCreator: React.FC<BigBoxMapCreatorProps> = ({
   onUpdateOperator,
   currentDate,
   onSelectDate,
-  onBackToHub
+  onBackToHub,
+  logActivity
 }) => {
   const [items, setItems] = useState<BigBoxItem[]>(SEED_BIG_BOX_ITEMS[currentStation] || []);
   const [selectedBay, setSelectedBay] = useState<string | null>('Bay 1');
@@ -191,7 +193,9 @@ export const BigBoxMapCreator: React.FC<BigBoxMapCreatorProps> = ({
     
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, `Dragonfly_${currentStation}_BigBox_Staging_Manifest_${currentDate}.xlsx`);
+    const filename = `Dragonfly_${currentStation}_BigBox_Staging_Manifest_${currentDate}.xlsx`;
+    saveAs(blob, filename);
+    logActivity?.('download', filename);
   };
 
   // Export Printable Warehouse Staging Sheet (PDF)
@@ -305,7 +309,9 @@ export const BigBoxMapCreator: React.FC<BigBoxMapCreatorProps> = ({
 
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      saveAs(blob, `Dragonfly_${currentStation}_BigBox_Warehouse_StagingMap_${currentDate}.pdf`);
+      const filename = `Dragonfly_${currentStation}_BigBox_Warehouse_StagingMap_${currentDate}.pdf`;
+      saveAs(blob, filename);
+      logActivity?.('download', filename);
     } catch (err) {
       console.error('Failed to export PDF:', err);
       alert('Error generating Big Box staging PDF.');

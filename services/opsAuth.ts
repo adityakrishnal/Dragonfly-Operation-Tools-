@@ -115,16 +115,21 @@ export interface ActivityEntry {
   created_at: string;
 }
 
-export async function fetchActivity(filters?: {
-  user?: string;
-  app?: string;
-  limit?: number;
-}): Promise<ActivityEntry[]> {
+export async function fetchActivity(
+  sessionId: string,
+  filters?: {
+    user?: string;
+    app?: string;
+    limit?: number;
+  }
+): Promise<ActivityEntry[]> {
   const params = new URLSearchParams();
+  params.set("sessionId", sessionId);
   if (filters?.user) params.set("user", filters.user);
   if (filters?.app) params.set("app", filters.app);
   if (filters?.limit) params.set("limit", String(filters.limit));
   const res = await fetch("/api/activity?" + params.toString());
   const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Could not load activity log.");
   return data.activity || [];
 }

@@ -37,6 +37,7 @@ interface ManifestProcessorViewProps {
   onNavigateToCards: () => void;
   onProcessingCompleted: (result: ProcessingResult) => void;
   initialResults: ProcessingResult | null;
+  logActivity?: (action: string, details?: string) => void;
 }
 
 export const ManifestProcessorView: React.FC<ManifestProcessorViewProps> = ({
@@ -46,6 +47,7 @@ export const ManifestProcessorView: React.FC<ManifestProcessorViewProps> = ({
   onNavigateToCards,
   onProcessingCompleted,
   initialResults,
+  logActivity,
 }) => {
   // File states (Exact 3 files required)
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -86,6 +88,10 @@ export const ManifestProcessorView: React.FC<ManifestProcessorViewProps> = ({
 
     const stationLabel = currentStation === 'KTCH' ? 'Kitchener (KTCH)' : 'London (LNDN)';
     addLog(`Process initialized for Station: ${stationLabel}`, 'info');
+    logActivity?.(
+      'generate',
+      `Started processing manifest="${pdfFile.name}", directory="${excelFile.name}", business list="${bizFile.name}"`
+    );
 
     try {
       const res = await processManifests(
@@ -131,12 +137,27 @@ export const ManifestProcessorView: React.FC<ManifestProcessorViewProps> = ({
     setErrorMessage(null);
   };
 
+  const selectPdfFile = (f: File | null) => {
+    setPdfFile(f);
+    if (f) logActivity?.('upload', `IDC Manifest: ${f.name}`);
+  };
+  const selectExcelFile = (f: File | null) => {
+    setExcelFile(f);
+    if (f) logActivity?.('upload', `Route Config File: ${f.name}`);
+  };
+  const selectBizFile = (f: File | null) => {
+    setBizFile(f);
+    if (f) logActivity?.('upload', `Business Database: ${f.name}`);
+  };
+
   const handleDownloadMasterZip = async () => {
     if (results) {
       addLog('Preparing Master ZIP package...', 'info');
       const masterZipBlob = await generateMasterZip(results);
       const dateStr = new Date().toISOString().split('T')[0];
-      saveAs(masterZipBlob, `Dragonfly_${currentStation}_Complete_Output_${dateStr}.zip`);
+      const filename = `Dragonfly_${currentStation}_Complete_Output_${dateStr}.zip`;
+      saveAs(masterZipBlob, filename);
+      logActivity?.('download', filename);
       addLog('Master ZIP download initiated.', 'success');
     }
   };
@@ -255,7 +276,7 @@ export const ManifestProcessorView: React.FC<ManifestProcessorViewProps> = ({
                   label="1. IDC Manifest (Overall)"
                   accept=".pdf"
                   file={pdfFile}
-                  onFileSelect={setPdfFile}
+                  onFileSelect={selectPdfFile}
                   icon={<FileText className="text-red-400" size={28} />}
                   description="Daily Overall Manifest PDF"
                   required
@@ -267,7 +288,7 @@ export const ManifestProcessorView: React.FC<ManifestProcessorViewProps> = ({
                   label="2. Route Config File"
                   accept=".xlsx, .xls, .csv"
                   file={excelFile}
-                  onFileSelect={setExcelFile}
+                  onFileSelect={selectExcelFile}
                   icon={<FileSpreadsheet className="text-emerald-400" size={28} />}
                   description="Route to IDC Mapping (Excel)"
                   required
@@ -279,7 +300,7 @@ export const ManifestProcessorView: React.FC<ManifestProcessorViewProps> = ({
                   label="3. Business Database"
                   accept=".xlsx, .xls, .csv"
                   file={bizFile}
-                  onFileSelect={setBizFile}
+                  onFileSelect={selectBizFile}
                   icon={<FileSpreadsheet className="text-amber-400" size={28} />}
                   description="Business Directory & Seq Rules"
                   required
@@ -420,7 +441,10 @@ export const ManifestProcessorView: React.FC<ManifestProcessorViewProps> = ({
                         </div>
                         <button
                           type="button"
-                          onClick={() => saveAs(bundle.blob, bundle.filename)}
+                          onClick={() => {
+                            saveAs(bundle.blob, bundle.filename);
+                            logActivity?.('download', bundle.filename);
+                          }}
                           className="p-2 bg-slate-800 hover:bg-slate-700 text-dragonfly-turquoise rounded-lg transition-colors"
                           title="Download IDC ZIP"
                         >
@@ -445,7 +469,10 @@ export const ManifestProcessorView: React.FC<ManifestProcessorViewProps> = ({
                   {results && (
                     <button
                       type="button"
-                      onClick={() => saveAs(results.summaryBlob, results.summaryName)}
+                      onClick={() => {
+                        saveAs(results.summaryBlob, results.summaryName);
+                        logActivity?.('download', results.summaryName);
+                      }}
                       className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5"
                     >
                       <Download size={14} />

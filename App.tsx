@@ -85,6 +85,15 @@ export const App: React.FC = () => {
     }
   };
 
+  // Bound logger for a specific app — pass this down so components can log
+  // uploads/downloads/actions without needing to know about auth or station.
+  const makeLogger = (appName: string) => (action: string, details?: string) =>
+    logActivity(auth, currentStation, appName, action, details);
+
+  const logManifestActivity = makeLogger('idc-manifest-processor');
+  const logCardActivity = makeLogger('checkin-card-generator');
+  const logBigBoxActivity = makeLogger('big-box-mapping');
+
   const handleLogout = async () => {
     logActivity(auth, currentStation, 'system', 'logout');
     await apiLogout(auth);
@@ -180,18 +189,20 @@ export const App: React.FC = () => {
 
           <div className="h-4 w-[1px] bg-slate-800 mx-1 hidden lg:block"></div>
 
-          <button
-            type="button"
-            onClick={() => navigateTo('activity')}
-            className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center ${
-              currentView === 'activity'
-                ? 'bg-slate-800 text-dragonfly-turquoise border border-slate-700'
-                : 'text-gray-400 hover:text-white hover:bg-slate-900'
-            }`}
-            title="Activity Log"
-          >
-            <ClipboardList size={14} />
-          </button>
+          {auth.user.isAdmin && (
+            <button
+              type="button"
+              onClick={() => navigateTo('activity')}
+              className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center ${
+                currentView === 'activity'
+                  ? 'bg-slate-800 text-dragonfly-turquoise border border-slate-700'
+                  : 'text-gray-400 hover:text-white hover:bg-slate-900'
+              }`}
+              title="Activity Log (Admin only)"
+            >
+              <ClipboardList size={14} />
+            </button>
+          )}
 
           <button
             type="button"
@@ -284,6 +295,7 @@ export const App: React.FC = () => {
             onNavigateToCards={() => navigateTo('generator')}
             onProcessingCompleted={handleProcessingCompleted}
             initialResults={manifestResults}
+            logActivity={logManifestActivity}
           />
         )}
 
@@ -296,6 +308,7 @@ export const App: React.FC = () => {
             currentDate={currentDate}
             onSelectDate={setCurrentDate}
             onBackToHub={() => navigateTo('hub')}
+            logActivity={logCardActivity}
           />
         )}
 
@@ -308,11 +321,18 @@ export const App: React.FC = () => {
             currentDate={currentDate}
             onSelectDate={setCurrentDate}
             onBackToHub={() => navigateTo('hub')}
+            logActivity={logBigBoxActivity}
           />
         )}
 
-        {currentView === 'activity' && (
-          <ActivityLogView onBackToHub={() => navigateTo('hub')} />
+        {currentView === 'activity' && auth.user.isAdmin && (
+          <ActivityLogView sessionId={auth.sessionId} onBackToHub={() => navigateTo('hub')} />
+        )}
+
+        {currentView === 'activity' && !auth.user.isAdmin && (
+          <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+            The Activity Log is only visible to admin accounts.
+          </div>
         )}
 
         {currentView === 'feedback' && (

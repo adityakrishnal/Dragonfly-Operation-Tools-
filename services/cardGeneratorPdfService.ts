@@ -131,10 +131,10 @@ export async function parseManifestPdfForRoutes(
 
   onProgress?.(25, `Analyzing ${totalPages} pages for ${station} route sections & QR codes...`);
 
-  // Station prefix pattern e.g. LNDN101, LNDN1200 or KTCH101, KTCH1200 (3 or 4 digits)
+  // Station prefix pattern e.g. LNDN1200 or KTCH1200 (exactly 4 digits)
   const stationPrefix = station.toUpperCase();
-  const stationRouteRegex = new RegExp(`\\b(${stationPrefix}\\d{3,4})\\b`, 'i');
-  const genericRouteRegex = /\b([A-Z]{3,4}\d{3,4}|RT-?\d{2,4})\b/gi;
+  const stationRouteRegex = new RegExp(`\\b(${stationPrefix}\\d{4})\\b`, 'i');
+  const genericRouteRegex = /\b([A-Z]{3,4}\d{4}|RT-?\d{2,4})\b/gi;
   const routeHeaderRegex = /(?:ROUTE|RT|DISPATCH|SECTION)[\s:#]+([A-Z0-9_-]+)/i;
   const dateRegex = /\b(202\d[-/.](?:0[1-9]|1[0-2])[-/.](?:0[1-9]|[12]\d|3[01])|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+202\d)\b/i;
 
@@ -189,7 +189,7 @@ export async function parseManifestPdfForRoutes(
       let matchRoute: string | null = null;
       let rawHeading = line;
 
-      // 1. Direct station prefix match (e.g. LNDN101, LNDN1200 or KTCH101, KTCH1200)
+      // 1. Direct station prefix match (e.g. LNDN1200 or KTCH1200)
       const directMatch = line.match(stationRouteRegex);
       if (directMatch) {
         matchRoute = directMatch[1].toUpperCase();
@@ -200,7 +200,7 @@ export async function parseManifestPdfForRoutes(
           const rawCode = headerMatch[1].toUpperCase();
           if (rawCode.startsWith(stationPrefix)) {
             matchRoute = rawCode;
-          } else if (/^\d{3,4}$/.test(rawCode)) {
+          } else if (/^\d{4}$/.test(rawCode)) {
             matchRoute = `${stationPrefix}${rawCode}`;
           } else {
             matchRoute = rawCode;
@@ -325,7 +325,7 @@ export async function parseManifestPdfForRoutes(
   if (detectedRoutes.length === 0) {
     onProgress?.(90, 'No explicit route headers found, creating station routes with QR codes for testing...');
     const samplePrefix = station === 'KTCH' ? 'KTCH' : 'LNDN';
-    const sampleNumbers = [101, 102, 103, 104, 105, 106, 1200, 1201];
+    const sampleNumbers = [1101, 1102, 1103, 1104, 1105, 1106, 1200, 1201];
     
     sampleNumbers.forEach((num, idx) => {
       const code = `${samplePrefix}${num}`;

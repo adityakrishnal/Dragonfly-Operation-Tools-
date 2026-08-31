@@ -1,33 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import { fetchActivity, ActivityEntry } from '../services/opsAuth';
-import { ArrowLeft, RefreshCw, LogIn, LogOut, Activity as ActivityIcon } from 'lucide-react';
+import { ArrowLeft, RefreshCw, LogIn, LogOut, Upload, Download, ScanLine, Trash2, Activity as ActivityIcon } from 'lucide-react';
 
 interface ActivityLogViewProps {
+  sessionId: string;
   onBackToHub: () => void;
 }
 
 const actionIcon = (action: string) => {
   if (action === 'login') return <LogIn size={13} className="text-emerald-400" />;
   if (action === 'logout') return <LogOut size={13} className="text-gray-500" />;
+  if (action === 'upload') return <Upload size={13} className="text-amber-400" />;
+  if (action === 'download' || action === 'generate') return <Download size={13} className="text-dragonfly-lightblue" />;
+  if (action === 'scan') return <ScanLine size={13} className="text-dragonfly-turquoise" />;
+  if (action === 'delete') return <Trash2 size={13} className="text-red-400" />;
   return <ActivityIcon size={13} className="text-dragonfly-turquoise" />;
 };
 
-const ActivityLogView: React.FC<ActivityLogViewProps> = ({ onBackToHub }) => {
+const ActivityLogView: React.FC<ActivityLogViewProps> = ({ sessionId, onBackToHub }) => {
   const [entries, setEntries] = useState<ActivityEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [userFilter, setUserFilter] = useState('');
+  const [appFilter, setAppFilter] = useState('');
 
   const load = () => {
     setLoading(true);
-    fetchActivity({ user: userFilter || undefined, limit: 300 })
+    setError(null);
+    fetchActivity(sessionId, { user: userFilter || undefined, app: appFilter || undefined, limit: 500 })
       .then(setEntries)
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userFilter]);
+  }, [userFilter, appFilter]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-950 text-gray-100 p-6">
@@ -50,12 +59,31 @@ const ActivityLogView: React.FC<ActivityLogViewProps> = ({ onBackToHub }) => {
         </button>
       </div>
 
-      <input
-        value={userFilter}
-        onChange={(e) => setUserFilter(e.target.value)}
-        placeholder="Filter by name…"
-        className="mb-4 w-full max-w-xs bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dragonfly-turquoise"
-      />
+      <div className="flex items-center gap-3 mb-4">
+        <input
+          value={userFilter}
+          onChange={(e) => setUserFilter(e.target.value)}
+          placeholder="Filter by name…"
+          className="w-full max-w-xs bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dragonfly-turquoise"
+        />
+        <select
+          value={appFilter}
+          onChange={(e) => setAppFilter(e.target.value)}
+          className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-dragonfly-turquoise"
+        >
+          <option value="">All apps</option>
+          <option value="idc-manifest-processor">IDC Manifest Processor</option>
+          <option value="checkin-card-generator">Check-In/Out Card Generator</option>
+          <option value="big-box-mapping">Big Box Map Creator</option>
+          <option value="system">System (login/logout)</option>
+        </select>
+      </div>
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-400">
+          {error}
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto custom-scrollbar rounded-xl border border-slate-800">
         <table className="w-full text-xs">
@@ -84,10 +112,10 @@ const ActivityLogView: React.FC<ActivityLogViewProps> = ({ onBackToHub }) => {
                     {e.action}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-gray-500">{e.details || '—'}</td>
+                <td className="px-3 py-2 text-gray-300">{e.details || '—'}</td>
               </tr>
             ))}
-            {!loading && entries.length === 0 && (
+            {!loading && !error && entries.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-3 py-8 text-center text-gray-500">
                   No activity recorded yet.

@@ -167,6 +167,24 @@ app.post("/activity", async (c) => {
 });
 
 app.get("/activity", async (c) => {
+  // Admin-only: verify the requesting session belongs to an admin,
+  // not just relying on the UI to hide this tab.
+  const sessionId = c.req.query("sessionId");
+  if (!sessionId) {
+    return c.json({ error: "Admin session required." }, 401);
+  }
+  const requester = await c.env.DB.prepare(
+    `SELECT su.is_admin AS is_admin
+     FROM auth_sessions a
+     JOIN staff_users su ON su.id = a.user_id
+     WHERE a.id = ? AND a.logout_at IS NULL`
+  )
+    .bind(sessionId)
+    .first<{ is_admin: number }>();
+  if (!requester || !requester.is_admin) {
+    return c.json({ error: "Admin access required." }, 403);
+  }
+
   const limit = Math.min(Number(c.req.query("limit") ?? 200), 500);
   const user = c.req.query("user");
   const app_ = c.req.query("app");
