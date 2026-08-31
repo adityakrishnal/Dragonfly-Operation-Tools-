@@ -79,6 +79,26 @@ export async function addStaff(name: string, designation: string, pin: string) {
   if (!res.ok) throw new Error(data.error || "Could not add staff.");
 }
 
+export async function changePin(sessionId: string, currentPin: string, newPin: string) {
+  const res = await fetch("/api/auth/change-pin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId, currentPin, newPin }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Could not change PIN.");
+}
+
+export async function resetStaffPin(sessionId: string, targetUserId: string, newPin: string) {
+  const res = await fetch("/api/auth/reset-pin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId, targetUserId, newPin }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Could not reset PIN.");
+}
+
 export async function logActivity(
   auth: AuthState | null,
   station: string,

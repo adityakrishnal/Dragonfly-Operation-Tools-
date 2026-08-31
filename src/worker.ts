@@ -139,6 +139,82 @@ app.post("/auth/staff", async (c) => {
   return c.json({ ok: true });
 });
 
+// Self-service: change your own PIN (requires knowing the current one).
+app.post("/auth/change-pin", async (c) => {
+  const { sessionId, currentPin, newPin } = await c.req.json<{
+    sessionId: string;
+    currentPin: string;
+    newPin: string;
+  }>();
+  if (!sessionId || !currentPin || !newPin) {
+    return c.json({ error: "Missing required fields." }, 400);
+  }
+  if (newPin.length < 4) {
+    return c.json({ error: "New PIN must be at least 4 digits." }, 400);
+  }
+
+  const session = await c.env.DB.prepare(
+    `SELECT su.id, su.pin_hash
+     FROM auth_sessions a
+     JOIN staff_users su ON su.id = a.user_id
+     WHERE a.id = ? AND a.logout_at IS NULL`
+  )
+    .bind(sessionId)
+    .first<{ id: string; pin_hash: string }>();
+
+  if (!session) {
+    return c.json({ error: "Session expired — please log in again." }, 401);
+  }
+
+  const currentHash = await sha256(currentPin);
+  if (currentHash !== session.pin_hash) {
+    return c.json({ error: "Current PIN is incorrect." }, 401);
+  }
+
+  const newHash = await sha256(newPin);
+  await c.env.DB.prepare("UPDATE staff_users SET pin_hash = ? WHERE id = ?")
+    .bind(newHash, session.id)
+    .run();
+
+  return c.json({ ok: true });
+});
+
+// Admin-only: reset someone else's PIN without knowing the old one
+// (for lockouts). Verifies the requesting session is an admin.
+app.post("/auth/reset-pin", async (c) => {
+  const { sessionId, targetUserId, newPin } = await c.req.json<{
+    sessionId: string;
+    targetUserId: string;
+    newPin: string;
+  }>();
+  if (!sessionId || !targetUserId || !newPin) {
+    return c.json({ error: "Missing required fields." }, 400);
+  }
+  if (newPin.length < 4) {
+    return c.json({ error: "New PIN must be at least 4 digits." }, 400);
+  }
+
+  const requester = await c.env.DB.prepare(
+    `SELECT su.is_admin AS is_admin
+     FROM auth_sessions a
+     JOIN staff_users su ON su.id = a.user_id
+     WHERE a.id = ? AND a.logout_at IS NULL`
+  )
+    .bind(sessionId)
+    .first<{ is_admin: number }>();
+
+  if (!requester || !requester.is_admin) {
+    return c.json({ error: "Admin access required." }, 403);
+  }
+
+  const newHash = await sha256(newPin);
+  await c.env.DB.prepare("UPDATE staff_users SET pin_hash = ? WHERE id = ?")
+    .bind(newHash, targetUserId)
+    .run();
+
+  return c.json({ ok: true });
+});
+
 // --- Activity log ---------------------------------------------------------
 
 app.post("/activity", async (c) => {

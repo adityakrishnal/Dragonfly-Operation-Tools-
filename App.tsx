@@ -8,6 +8,7 @@ import BigBoxMapCreator from './components/BigBoxMapCreator';
 import FeedbackView from './components/FeedbackView';
 import LoginScreen from './components/LoginScreen';
 import ActivityLogView from './components/ActivityLogView';
+import ChangePinModal from './components/ChangePinModal';
 import { AuthState, loadStoredAuth, logout as apiLogout, logActivity } from './services/opsAuth';
 import {
   Layers,
@@ -19,7 +20,8 @@ import {
   Calendar,
   ChevronDown,
   ClipboardList,
-  LogOut
+  LogOut,
+  KeyRound
 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -31,6 +33,8 @@ export const App: React.FC = () => {
 
   // Auth: who's logged in right now
   const [auth, setAuth] = useState<AuthState | null>(() => loadStoredAuth());
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showChangePinModal, setShowChangePinModal] = useState(false);
 
   // Shared Operator Profile (Name & Designation) — derived from the logged-in user
   const [operatorProfile, setOperatorProfile] = useState<OperatorProfile>({
@@ -257,19 +261,55 @@ export const App: React.FC = () => {
             />
           </div>
 
-          {/* Logged-in user + logout */}
-          <button
-            type="button"
-            onClick={handleLogout}
-            title="Log out"
-            className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs hover:border-red-500/50 hover:text-red-400 transition-colors"
-          >
-            <User size={13} className="text-dragonfly-turquoise" />
-            <span className="hidden sm:inline font-bold text-gray-200">{auth.user.name}</span>
-            <LogOut size={12} />
-          </button>
+          {/* Logged-in user menu: change PIN + logout */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowUserMenu(v => !v)}
+              title={auth.user.name}
+              className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs hover:border-slate-700 transition-colors"
+            >
+              <User size={13} className="text-dragonfly-turquoise" />
+              <span className="hidden sm:inline font-bold text-gray-200">{auth.user.name}</span>
+              <ChevronDown size={12} className="text-gray-500" />
+            </button>
+
+            {showUserMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
+                <div className="absolute right-0 top-full mt-1.5 w-40 bg-slate-900 border border-slate-800 rounded-lg shadow-xl z-20 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      setShowChangePinModal(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-gray-200 hover:bg-slate-800 transition-colors text-left"
+                  >
+                    <KeyRound size={13} className="text-dragonfly-turquoise" />
+                    Change PIN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-gray-200 hover:bg-slate-800 hover:text-red-400 transition-colors text-left border-t border-slate-800"
+                  >
+                    <LogOut size={13} />
+                    Log Out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
+
+      {showChangePinModal && (
+        <ChangePinModal sessionId={auth.sessionId} onClose={() => setShowChangePinModal(false)} />
+      )}
 
       {/* Main View Router */}
       <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
