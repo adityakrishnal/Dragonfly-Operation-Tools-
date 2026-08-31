@@ -1,6 +1,10 @@
-name = "dragonfly-ops-hub"
+name = "dragonfly-operation-tools"
 compatibility_date = "2026-08-01"
-pages_build_output_dir = "dist"
+main = "src/worker.ts"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
 
 [[d1_databases]]
 binding = "DB"

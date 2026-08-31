@@ -174,5 +174,13 @@ app.get("/activity", async (c) => {
   return c.json({ activity: results });
 });
 
-export const onRequest: PagesFunction<Bindings> = (context) =>
-  app.fetch(context.request, context.env, context as unknown as ExecutionContext);
+export default {
+  async fetch(request: Request, env: Bindings & { ASSETS: Fetcher }, ctx: ExecutionContext) {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/api/")) {
+      return app.fetch(request, env, ctx);
+    }
+    // Everything else is a static asset (the built Vite app)
+    return env.ASSETS.fetch(request);
+  },
+};
