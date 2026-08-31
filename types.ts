@@ -198,52 +198,60 @@ export interface CardGeneratorSettings {
   useCustomTemplate: boolean;
 }
 
-// Big Box Map Creator Types
-export interface BigBoxItem {
+// Big Box Mapping & Excel Automation Types
+// A "scanned box" is one physical scan event on the warehouse floor: either a
+// tracking ID barcode (auto-resolves its route from the manifest) or a raw
+// route number typed/scanned directly. 'NEXT COLUMN' entries are column-break
+// markers, not real boxes.
+export interface BigBoxScannedItem {
   id: string;
-  trackingNumber: string;
-  routeCode: string;
-  station: StationCode;
-  zone: string;
-  stagingBay: string;
-  customerName: string;
-  address: string;
-  city: string;
-  postalCode: string;
-  weightKg: number;
-  dimensionsCm: string; // e.g. "120x80x60"
-  cubeVolumeCuFt: number;
-  itemType: 'Oversize Box' | 'Furniture' | 'Mattress' | 'Appliance' | 'Tires' | 'Bulk Pallet';
-  isTwoPersonLift: boolean;
-  isFragile: boolean;
-  signatureRequired: boolean;
-  deliveryWindow: 'Morning (08:00 - 12:00)' | 'Afternoon (12:00 - 17:00)' | 'Evening (17:00 - 21:00)' | 'Anytime';
-  stopSequence: number;
-  driverAssigned?: string;
-  status: 'Staged' | 'Loading' | 'Out for Delivery' | 'Delivered' | 'Re-attempt';
+  position: number;
+  boxId: string;
+  route: string;
+  trackingId?: string;
+  manifestIndex?: string;
 }
 
-export interface BigBoxZone {
-  id: string;
-  code: string;
-  name: string;
-  station: StationCode;
-  color: string;
-  description: string;
-  itemCount: number;
-  totalWeightKg: number;
-  assignedBay: string;
+// One row of the uploaded manifest: which route + stop index a tracking ID
+// belongs to. Used to auto-resolve scans and to flag unmatched tracking IDs.
+export interface BigBoxManifestPackage {
+  trackingId: string;
+  route: string;
+  manifestIndex: string;
 }
 
-export interface BigBoxStagingBay {
-  id: string;
-  bayNumber: string;
-  bayName: string;
+export interface BigBoxSheet3Row {
+  route: string;
+  count: number;
+  indices: string;
+}
+
+export interface BigBoxSheet2Row {
+  route: string;
+  routeTotal: number;
+  totalArea: number;
+  colCounts: Record<number, number>;
+}
+
+export interface BigBoxSheet1Row {
+  date: string;
+  position: number;
+  physicalCol: number;
+  boxId: string;
+  route: string;
+  tracking_id: string;
+  raw_tracking_id: string;
+  isMatched: boolean;
+  hasUnderscore: boolean;
+  manifest_index: string;
+}
+
+// Persisted per station+date in localStorage so a page refresh on the
+// warehouse floor doesn't lose an in-progress scanning session.
+export interface BigBoxSessionState {
+  date: string;
   station: StationCode;
-  zoneCode: string;
-  capacityBoxes: number;
-  currentBoxes: number;
-  routesAssigned: string[];
-  status: 'Available' | 'Staging' | 'Ready for Van Loading' | 'Cleared';
+  scannedItems: BigBoxScannedItem[];
+  manifestPackages: BigBoxManifestPackage[];
 }
 
