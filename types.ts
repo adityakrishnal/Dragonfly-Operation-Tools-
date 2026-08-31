@@ -125,14 +125,10 @@ export interface OperatorProfile {
 }
 
 export const DESIGNATION_OPTIONS = [
-  'Dispatch Supervisor',
-  'Station Manager',
-  'Operations Lead',
-  'Yard Dispatcher',
-  'Sort Lead',
-  'Operations Associate',
-  'Driver Lead',
-  'Fleet Coordinator'
+  'Operations Supervisor',
+  'Operations Coordinator',
+  'Operations Lead Hand',
+  'Station Manager'
 ] as const;
 
 export type DesignationType = typeof DESIGNATION_OPTIONS[number];

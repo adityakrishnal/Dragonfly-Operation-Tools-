@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StationCode, ProcessingResult, OperatorProfile, DESIGNATION_OPTIONS } from './types';
 import DragonflySignature, { DragonflyLogoGraphic } from './components/DragonflyLogo';
 import HubDashboard from './components/HubDashboard';
@@ -6,6 +6,9 @@ import ManifestProcessorView from './components/ManifestProcessorView';
 import CheckInOutCardGenerator from './components/CheckInOutCardGenerator';
 import BigBoxMapCreator from './components/BigBoxMapCreator';
 import FeedbackView from './components/FeedbackView';
+import LoginScreen from './components/LoginScreen';
+import ActivityLogView from './components/ActivityLogView';
+import { AuthState, loadStoredAuth, logout as apiLogout, logActivity } from './services/opsAuth';
 import {
   Layers,
   LayoutDashboard,
@@ -14,21 +17,35 @@ import {
   MessageSquare,
   User,
   Calendar,
-  ChevronDown
+  ChevronDown,
+  ClipboardList,
+  LogOut
 } from 'lucide-react';
 
 export const App: React.FC = () => {
-  // Navigation State: Strictly the 3 requested apps + Hub + Feedback
-  const [currentView, setCurrentView] = useState<'hub' | 'manifest' | 'generator' | 'bigbox' | 'feedback'>('hub');
-  
+  // Navigation State: 3 apps + Hub + Feedback + Activity Log
+  const [currentView, setCurrentView] = useState<'hub' | 'manifest' | 'generator' | 'bigbox' | 'feedback' | 'activity'>('hub');
+
   // Selected Station State (Kitchener: KTCH vs London: LNDN)
   const [currentStation, setCurrentStation] = useState<StationCode>('KTCH');
 
-  // Shared Operator Profile (Name & Designation)
+  // Auth: who's logged in right now
+  const [auth, setAuth] = useState<AuthState | null>(() => loadStoredAuth());
+
+  // Shared Operator Profile (Name & Designation) — derived from the logged-in user
   const [operatorProfile, setOperatorProfile] = useState<OperatorProfile>({
     name: 'Aditya Lavakumar',
     designation: 'Dispatch Supervisor'
   });
+
+  useEffect(() => {
+    if (auth) {
+      setOperatorProfile({
+        name: auth.user.name,
+        designation: auth.user.designation || 'Operations Associate'
+      });
+    }
+  }, [auth]);
 
   // Global Date State
   const [currentDate, setCurrentDate] = useState<string>(
@@ -44,9 +61,42 @@ export const App: React.FC = () => {
 
   const handleProcessingCompleted = (result: ProcessingResult) => {
     setManifestResults(result);
+    logActivity(
+      auth,
+      currentStation,
+      'idc-manifest-processor',
+      'generate',
+      `${result.summaryRows?.length || 0} routes processed`
+    );
+  };
+
+  const navigateTo = (view: typeof currentView) => {
+    setCurrentView(view);
+    const appNames: Record<string, string> = {
+      manifest: 'idc-manifest-processor',
+      generator: 'checkin-card-generator',
+      bigbox: 'big-box-mapping',
+      activity: 'system',
+      feedback: 'system',
+      hub: 'system'
+    };
+    if (view !== 'hub') {
+      logActivity(auth, currentStation, appNames[view] || view, 'open_app');
+    }
+  };
+
+  const handleLogout = async () => {
+    logActivity(auth, currentStation, 'system', 'logout');
+    await apiLogout(auth);
+    setAuth(null);
+    setCurrentView('hub');
   };
 
   const processedCount = manifestResults?.summaryRows?.length || 0;
+
+  if (!auth) {
+    return <LoginScreen station={currentStation} onLogin={setAuth} />;
+  }
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-950 text-gray-100 font-sans">
@@ -56,7 +106,7 @@ export const App: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => setCurrentView('hub')}
+            onClick={() => navigateTo('hub')}
             className="flex items-center gap-2.5 hover:opacity-90 transition-opacity text-left"
           >
             <DragonflyLogoGraphic height={30} />
@@ -75,7 +125,7 @@ export const App: React.FC = () => {
         <nav className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto custom-scrollbar">
           <button
             type="button"
-            onClick={() => setCurrentView('hub')}
+            onClick={() => navigateTo('hub')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
               currentView === 'hub'
                 ? 'bg-slate-800 text-white shadow-sm border border-slate-700'
@@ -88,7 +138,7 @@ export const App: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setCurrentView('manifest')}
+            onClick={() => navigateTo('manifest')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
               currentView === 'manifest'
                 ? 'bg-dragonfly-turquoise text-white shadow-sm shadow-dragonfly-turquoise/20'
@@ -102,7 +152,7 @@ export const App: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setCurrentView('generator')}
+            onClick={() => navigateTo('generator')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
               currentView === 'generator'
                 ? 'bg-dragonfly-lightblue text-slate-950 shadow-sm shadow-dragonfly-lightblue/20 font-black'
@@ -116,7 +166,7 @@ export const App: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setCurrentView('bigbox')}
+            onClick={() => navigateTo('bigbox')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
               currentView === 'bigbox'
                 ? 'bg-amber-500 text-slate-950 shadow-sm shadow-amber-500/20 font-black'
@@ -132,7 +182,20 @@ export const App: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setCurrentView('feedback')}
+            onClick={() => navigateTo('activity')}
+            className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center ${
+              currentView === 'activity'
+                ? 'bg-slate-800 text-dragonfly-turquoise border border-slate-700'
+                : 'text-gray-400 hover:text-white hover:bg-slate-900'
+            }`}
+            title="Activity Log"
+          >
+            <ClipboardList size={14} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigateTo('feedback')}
             className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center ${
               currentView === 'feedback'
                 ? 'bg-slate-800 text-dragonfly-turquoise border border-slate-700'
@@ -182,6 +245,18 @@ export const App: React.FC = () => {
               className="bg-transparent text-gray-200 font-mono text-xs focus:outline-none cursor-pointer"
             />
           </div>
+
+          {/* Logged-in user + logout */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            title="Log out"
+            className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs hover:border-red-500/50 hover:text-red-400 transition-colors"
+          >
+            <User size={13} className="text-dragonfly-turquoise" />
+            <span className="hidden sm:inline font-bold text-gray-200">{auth.user.name}</span>
+            <LogOut size={12} />
+          </button>
         </div>
       </header>
 
@@ -195,7 +270,7 @@ export const App: React.FC = () => {
             onUpdateOperator={setOperatorProfile}
             currentDate={currentDate}
             onSelectDate={setCurrentDate}
-            onNavigate={view => setCurrentView(view)}
+            onNavigate={view => navigateTo(view)}
             processedRoutesCount={processedCount}
             hasManifestResults={!!manifestResults}
           />
@@ -205,8 +280,8 @@ export const App: React.FC = () => {
           <ManifestProcessorView
             currentStation={currentStation}
             onSelectStation={handleSelectStation}
-            onBackToHub={() => setCurrentView('hub')}
-            onNavigateToCards={() => setCurrentView('generator')}
+            onBackToHub={() => navigateTo('hub')}
+            onNavigateToCards={() => navigateTo('generator')}
             onProcessingCompleted={handleProcessingCompleted}
             initialResults={manifestResults}
           />
@@ -220,7 +295,7 @@ export const App: React.FC = () => {
             onUpdateOperator={setOperatorProfile}
             currentDate={currentDate}
             onSelectDate={setCurrentDate}
-            onBackToHub={() => setCurrentView('hub')}
+            onBackToHub={() => navigateTo('hub')}
           />
         )}
 
@@ -232,12 +307,16 @@ export const App: React.FC = () => {
             onUpdateOperator={setOperatorProfile}
             currentDate={currentDate}
             onSelectDate={setCurrentDate}
-            onBackToHub={() => setCurrentView('hub')}
+            onBackToHub={() => navigateTo('hub')}
           />
         )}
 
+        {currentView === 'activity' && (
+          <ActivityLogView onBackToHub={() => navigateTo('hub')} />
+        )}
+
         {currentView === 'feedback' && (
-          <FeedbackView onBackToDashboard={() => setCurrentView('hub')} />
+          <FeedbackView onBackToDashboard={() => navigateTo('hub')} />
         )}
       </main>
 

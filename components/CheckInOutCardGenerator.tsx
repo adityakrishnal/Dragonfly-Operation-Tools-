@@ -1314,47 +1314,9 @@ export const CheckInOutCardGenerator: React.FC<CheckInOutCardGeneratorProps> = (
                   <p className="text-[11px] text-gray-500">Embeds scan-ready QR payload onto each driver card slip.</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div>
-                    <label className="block text-gray-400 font-semibold mb-1">Default Wave #:</label>
-                    <input
-                      type="text"
-                      value={settings.defaultWave}
-                      onChange={e => setSettings(prev => ({ ...prev, defaultWave: e.target.value }))}
-                      className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-gray-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-400 font-semibold mb-1">Default Wave Time:</label>
-                    <input
-                      type="text"
-                      value={settings.defaultWaveTime}
-                      onChange={e => setSettings(prev => ({ ...prev, defaultWaveTime: e.target.value }))}
-                      className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-gray-200"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-gray-400 font-semibold mb-1">Default IDC Name:</label>
-                    <input
-                      type="text"
-                      value={settings.defaultIdcName}
-                      onChange={e => setSettings(prev => ({ ...prev, defaultIdcName: e.target.value }))}
-                      className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-gray-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-400 font-semibold mb-1">Default Approved By:</label>
-                    <input
-                      type="text"
-                      value={operatorProfile.name || settings.defaultApprovedBy}
-                      onChange={e => onUpdateOperator({ ...operatorProfile, name: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-gray-200"
-                    />
-                  </div>
-                </div>
+                <p className="text-[11px] text-gray-500 pt-1 border-t border-slate-800/80">
+                  Wave #, Wave Time, IDC/Depot, Driver #, and Notes are left blank on the printed card for manual fill-in — only Station, Route #, and your Operator/Designation sign-off are pre-filled.
+                </p>
               </div>
             )}
 

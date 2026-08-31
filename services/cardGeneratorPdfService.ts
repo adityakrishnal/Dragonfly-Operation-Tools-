@@ -588,32 +588,10 @@ async function stampRouteDataOnPage(
     color: rgb(0.0, 0.45, 0.4)
   });
 
-  // Date
-  page.drawText(safeWinAnsiText(dateStr), {
-    x: coords.date.x,
-    y: coords.date.y,
-    size: settings.fontSize,
-    font: fontRegular,
-    color: rgb(0.1, 0.1, 0.1)
-  });
-
-  // Wave #
-  page.drawText(safeWinAnsiText(route.waveNumber || settings.defaultWave), {
-    x: coords.wave.x,
-    y: coords.wave.y,
-    size: settings.fontSize,
-    font: fontBold,
-    color: rgb(0.1, 0.1, 0.1)
-  });
-
-  // Wave Time
-  page.drawText(safeWinAnsiText(route.waveTime || settings.defaultWaveTime), {
-    x: coords.waveTime.x,
-    y: coords.waveTime.y,
-    size: settings.fontSize,
-    font: fontRegular,
-    color: rgb(0.1, 0.1, 0.1)
-  });
+  // Date, Wave #, Wave Time, IDC Name, Driver #, and Notes are intentionally
+  // left blank on the printed card for manual fill-in during dispatch —
+  // only Station, Route #, and the Operator/Designation sign-off are
+  // pre-filled by this tool.
 
   // Route # (Large & Bold)
   page.drawText(safeWinAnsiText(route.routeCode), {
@@ -622,36 +600,6 @@ async function stampRouteDataOnPage(
     size: settings.routeFontSize,
     font: fontBold,
     color: rgb(0.0, 0.55, 0.48) // Dragonfly turquoise
-  });
-
-  // IDC Name
-  page.drawText(safeWinAnsiText(route.idcName || settings.defaultIdcName), {
-    x: coords.idcName.x,
-    y: coords.idcName.y,
-    size: settings.fontSize,
-    font: fontRegular,
-    color: rgb(0.15, 0.15, 0.15)
-  });
-
-  // Driver #
-  if (route.driverNumber) {
-    page.drawText(safeWinAnsiText(route.driverNumber), {
-      x: coords.driverNumber.x,
-      y: coords.driverNumber.y,
-      size: settings.fontSize,
-      font: fontBold,
-      color: rgb(0.1, 0.1, 0.1)
-    });
-  }
-
-  // Notes or package stats
-  const notesText = route.notes || `${route.packageCount || 0} Pkgs | ${route.stopCount || 0} Stops (${route.seqRange || 'Seq'})`;
-  page.drawText(safeWinAnsiText(notesText), {
-    x: coords.notes.x,
-    y: coords.notes.y,
-    size: settings.fontSize - 1.5,
-    font: fontRegular,
-    color: rgb(0.25, 0.25, 0.25)
   });
 
   // Approved by text (Operator Name & Designation)
