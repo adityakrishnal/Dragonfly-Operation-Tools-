@@ -6,6 +6,11 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>().basePath("/api");
 
+app.onError((err, c) => {
+  console.error(err);
+  return c.json({ error: "Something went wrong. Please try again." }, 500);
+});
+
 function id() {
   return crypto.randomUUID();
 }
@@ -113,6 +118,17 @@ app.post("/auth/staff", async (c) => {
   }>();
   if (!name || !pin) {
     return c.json({ error: "Name and PIN are required." }, 400);
+  }
+  const existing = await c.env.DB.prepare(
+    "SELECT id FROM staff_users WHERE name = ?"
+  )
+    .bind(name.trim())
+    .first();
+  if (existing) {
+    return c.json(
+      { error: `"${name.trim()}" already has a login — try logging in instead of creating a new one.` },
+      409
+    );
   }
   const pinHash = await sha256(pin);
   await c.env.DB.prepare(
